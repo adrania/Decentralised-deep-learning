@@ -9,17 +9,21 @@ Created on Fri Jun  16 13:29:18 2023
 # ··············································································
 # BEFORE START 
 # ··············································································
+# How to run: python local_models_external_evaluation.py
+# TODO · IMPORTANT: make sure functions.py is located in the same folder as this file or imported 
+# This code calculates local models complete performance [accuracy, precision, f1 score and kappa metrics]
 # ··············································································
 
 # LIBRARIES ····································································
 from tensorflow import keras
 import os
-import functions
 import numpy as np
+import functions
 # ··············································································
 
 # FUNCTIONS ····································································
 def predict_and_score_macro(dataset, true_labels, model):
+    '''Get predictions and calculate performance metrics'''
     import sklearn.metrics
 
     # ··· Get dataset predictions 
@@ -41,12 +45,8 @@ def predict_and_score_macro(dataset, true_labels, model):
 # ··············································································
 SEED = 0
 INDEX = 0
-SERVER = False 
 
-if SERVER:
-    DB_PATH = os.path.abspath('path') 
-else:
-    DB_PATH = os.path.abspath('path')
+DB_PATH = os.path.abspath('path')
 
 DB = ['ISRUC', 'SHHS', 'DREAMS', 'Telemetry', 'HMC-APR-2018', 'Dublin'] 
 E_FOLDER = 'e5-noFil-EpochNorm'
@@ -64,7 +64,6 @@ MODEL_NAME = 'run_2023-01-19' # TODO: change depending on which model we want to
 for folder in os.listdir(DB_PATH):
     print('Local model: ', folder) 
     neWpath = os.path.join(DB_PATH, folder) 
-    print(neWpath)
     for root, dirs, files in os.walk(neWpath):            
         # ··· Load model 
         if root.endswith(E_FOLDER + '/models'):
@@ -72,27 +71,23 @@ for folder in os.listdir(DB_PATH):
             print('Loading model...')
             print(root)
             model = keras.models.load_model(MODEL_NAME)
+            
     for db in DB:
-        # ··· Entramos en todas las demás DB donde vamos a evaluar
         if folder != db:
             external_path = os.path.join(DB_PATH, db)
             print('· Test database: ', db)
-            print(external_path)
+            
             for root, dirs, files in os.walk(external_path):                  
                 if root.endswith(E_FOLDER + '/datasets'):
                     os.chdir(root)
                     # ··· Load external dataset
                     print('Building external dataset...')
-                    if SERVER:
-                        external_data = np.load('server_full_data.npy')
-                    else:
-                        external_data = np.load('full_data.npy')
-                    
+                    external_data = np.load('full_data.npy')
                     external_buffer_size = len(external_data)
                     external_labels = np.load('full_labels.npy')
     
                     external_dataset = functions.My_Custom_Generator(external_data, external_labels, BATCH_SIZE, SEED, SPLIT)
-                    print(external_buffer_size)
+
                     # MODEL EVALUATION ·····························································
                     print('Evaluation...')
                     external_metrics = predict_and_score_macro(external_dataset, external_labels, model)
